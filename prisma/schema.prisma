@@ -11,16 +11,17 @@ datasource db {
 }
 
 model Patient {
-  id            Int    @id
-  first_Name    String
-  last_Name     String
-  Age           Int
-  Email         String
-  Phone         Int
-  Date_of_Birth Int
-  Address       String
-  City          String
-  Country       String
-  Zip_Code      Int
-  NHS_Number    String
+  id            Int    @id @default(autoincrement())
+  first_name    String
+  last_name     String
+  gender        String
+  age           Int
+  email         String @unique
+  phone         String @unique
+  date_of_birth String
+  address       String
+  city          String
+  country       String
+  zip_code      String
+  nhs_number    String @unique
 }

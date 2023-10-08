@@ -98,7 +98,6 @@ const addPatient = async (req, res) => {
               message: "Patients created successfully",
               newPatients,
             });
-            console.log("newPatients", newPatients);
           } catch (error) {
             console.log("error.meta.target", error);
             if (error.meta.target) {

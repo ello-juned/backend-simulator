@@ -3,7 +3,7 @@ const cors = require("cors");
 const checkDatabaseConnection = require("./connections/connectiondb");
 const router = require("./routes/patient");
 
-const PORT = 5501;
+const PORT = process.env.PORT || 5501;
 const app = express();
 
 app.use(express.json());

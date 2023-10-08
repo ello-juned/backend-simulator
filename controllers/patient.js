@@ -91,13 +91,14 @@ const addPatient = async (req, res) => {
           try {
             const newPatients = await prisma.patient.createMany({
               data: newPatientsList,
-              skipDuplicates: true,
+              skipDuplicates: false,
             });
 
             res.status(201).json({
               message: "Patients created successfully",
               newPatients,
             });
+            console.log("newPatients", newPatients);
           } catch (error) {
             console.log("error.meta.target", error);
             if (error.meta.target) {
@@ -156,4 +157,42 @@ const getPatient = async (req, res) => {
   }
 };
 
-module.exports = { addPatient, getPatient };
+// search api
+// serahcing based on [''name','email',....more]
+
+const searchPatient = async (req, res) => {
+  // query from user side---
+  const query = req.body.Query;
+  if (!query) {
+    return;
+  }
+
+  try {
+    const pateints = await prisma.patient.findMany({
+      where: {
+        OR: [
+          { address: { contains: query } },
+          { city: { contains: query } },
+          { country: { contains: query } },
+          { date_of_birth: { contains: query } },
+          { email: { contains: query } },
+          { last_name: { contains: query } },
+          { gender: { contains: query } },
+          { nhs_number: { contains: query } },
+          { first_name: { contains: query } },
+          { phone: { contains: query } },
+          { zip_code: { contains: query } },
+        ],
+      },
+    });
+    res.status(202).json({
+      pateints,
+      message: "search completed!",
+    });
+  } catch (error) {
+    console.log("error", error);
+    res.status(400).json({ message: "something Error in searching!" });
+  }
+};
+
+module.exports = { addPatient, getPatient, searchPatient };

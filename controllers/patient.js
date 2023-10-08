@@ -36,7 +36,7 @@ const addPatient = async (req, res) => {
         newPatient,
       });
     } catch (error) {
-      if (error.meta.target) {
+      if (error?.meta) {
         if (
           error.meta.target === "Patient_email_key" ||
           "Patient_phone_key" ||
@@ -194,4 +194,70 @@ const searchPatient = async (req, res) => {
   }
 };
 
-module.exports = { addPatient, getPatient, searchPatient };
+// get a patients by ID--
+const getSinglePatient = async (req, res) => {
+  const patientId = await parseInt(req.body.id);
+  try {
+    if (patientId) {
+      const patient = await prisma.patient.findUnique({
+        where: {
+          id: patientId,
+        },
+      });
+      res
+        .status(200)
+        .json({ patient, message: "patient succesfully  loaded." });
+    }
+  } catch (error) {
+    res.status(400).json({ message: "Invalid Id OR patient not found!" });
+  }
+};
+
+// get a patients by ID--
+const updateSinglePatient = async (req, res) => {
+  const patientId = parseInt(req.body.id);
+  const data = ({
+    first_name,
+    last_name,
+    gender,
+    age,
+    email,
+    phone,
+    date_of_birth,
+    address,
+    city,
+    country,
+    zip_code,
+    nhs_number,
+  } = req.body);
+
+  try {
+    if (!isNaN(patientId)) {
+      // Check if patientId is a valid number
+      const updatedPatient = await prisma.patient.update({
+        where: {
+          id: patientId,
+        },
+        data: {
+          ...data,
+        },
+      });
+
+      res
+        .status(200)
+        .json({ updatedPatient, message: "Patient successfully updated." });
+    } else {
+      res.status(400).json({ message: "Invalid ID!" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Error updating patient." });
+  }
+};
+
+module.exports = {
+  addPatient,
+  getPatient,
+  searchPatient,
+  getSinglePatient,
+  updateSinglePatient,
+};

@@ -10,7 +10,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Patient {
+model asset {
   id            Int    @id @default(autoincrement())
   first_name    String
   last_name     String

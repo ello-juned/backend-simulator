@@ -27,7 +27,7 @@ const addPatient = async (req, res) => {
       } = req.body);
 
       // Create a new patient using Prisma
-      const newPatient = await prisma.patient.create({
+      const newPatient = await prisma.asset.create({
         data: {
           ...bodyData,
         },
@@ -38,6 +38,7 @@ const addPatient = async (req, res) => {
         newPatient,
       });
     } catch (error) {
+      console.log("error", error);
       if (error?.meta) {
         if (
           error.meta.target === "Patient_email_key" ||
@@ -91,7 +92,7 @@ const addPatient = async (req, res) => {
           });
 
           try {
-            const newPatients = await prisma.patient.createMany({
+            const newPatients = await prisma.asset.createMany({
               data: newPatientsList,
               skipDuplicates: false,
             });
@@ -139,14 +140,14 @@ const getPatient = async (req, res) => {
     const skip = (currentPage - 1) * perPage;
 
     // total pateints in database table---
-    const totalPatients = await prisma.patient.count();
+    const totalPatients = await prisma.asset.count();
 
     // Fetch patients data using Prisma with pagination
-    const patients = await prisma.patient.findMany({
+    const patients = await prisma.asset.findMany({
       skip,
       take: perPage,
     });
-
+    console.log("totalPatients", totalPatients);
     res.status(200).json({
       patients,
       totalPatients,
@@ -169,7 +170,7 @@ const searchPatient = async (req, res) => {
   }
 
   try {
-    const pateints = await prisma.patient.findMany({
+    const pateints = await prisma.asset.findMany({
       where: {
         OR: [
           { address: { contains: query } },
@@ -200,7 +201,7 @@ const getSinglePatient = async (req, res) => {
   const patientId = await parseInt(req.body.id);
   try {
     if (patientId) {
-      const patient = await prisma.patient.findUnique({
+      const patient = await prisma.asset.findUnique({
         where: {
           id: patientId,
         },
@@ -236,7 +237,7 @@ const updateSinglePatient = async (req, res) => {
   try {
     if (!isNaN(patientId)) {
       // Check if patientId is a valid number
-      const updatedPatient = await prisma.patient.update({
+      const updatedPatient = await prisma.asset.update({
         where: {
           id: patientId,
         },
@@ -269,7 +270,7 @@ const deleteSinglePatient = async (req, res) => {
   try {
     if (!isNaN(patientId)) {
       // Check if patientId is a valid number
-      const deletedPatient = await prisma.patient.delete({
+      const deletedPatient = await prisma.asset.delete({
         where: {
           id: patientId,
         },

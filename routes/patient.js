@@ -7,6 +7,7 @@ const {
   searchPatient,
   getSinglePatient,
   updateSinglePatient,
+  deleteSinglePatient,
 } = require("../controllers/patient");
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -19,7 +20,8 @@ router.post("/add-patient", upload.single("csvFile"), addPatient);
 //with pagination
 router.get("/patients-data", getPatient);
 
-// serahcing based on [''name','email','mobile', 'nhs_number']
+// serahcing based on ["last_name","gender","age","email","phone","date_of_birth","address","city","country","zip_code","nhs_number"],
+
 router.post("/search-patient", searchPatient);
 
 // get a patients by ID--
@@ -27,4 +29,7 @@ router.post("/getSingle-Patient", getSinglePatient);
 
 // update a patients by ID--
 router.put("/updateSingle-Patient", updateSinglePatient);
+
+// update a patients by ID--
+router.delete("/deleteSingle-Patient", deleteSinglePatient);
 module.exports = router;

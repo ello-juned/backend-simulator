@@ -2,6 +2,8 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const csv = require("csv-parse");
 
+// add new patient or
+// multiple patients using CSV uploads--
 const addPatient = async (req, res) => {
   // Access the uploaded file via req.file
   const uploadedFile = req.file;
@@ -186,7 +188,6 @@ const searchPatient = async (req, res) => {
     });
     res.status(202).json({
       pateints,
-      message: "search completed!",
     });
   } catch (error) {
     console.log("error", error);
@@ -204,11 +205,12 @@ const getSinglePatient = async (req, res) => {
           id: patientId,
         },
       });
-      res
+      await res
         .status(200)
         .json({ patient, message: "patient succesfully  loaded." });
     }
   } catch (error) {
+    console.log("error in sinle", error);
     res.status(400).json({ message: "Invalid Id OR patient not found!" });
   }
 };
@@ -250,7 +252,35 @@ const updateSinglePatient = async (req, res) => {
       res.status(400).json({ message: "Invalid ID!" });
     }
   } catch (error) {
-    res.status(500).json({ message: "Error updating patient." });
+    console.log("error", error);
+    if (error.meta) {
+      res.status(400).json({
+        message: "Patient email , phone and nhs_number should be unique",
+      });
+    }
+    // res.status(500).json({ message: "Error updating patient." });
+  }
+};
+
+// delete a patients by ID--
+const deleteSinglePatient = async (req, res) => {
+  const patientId = req.body.id;
+
+  try {
+    if (!isNaN(patientId)) {
+      // Check if patientId is a valid number
+      const deletedPatient = await prisma.patient.delete({
+        where: {
+          id: patientId,
+        },
+      });
+
+      res.status(200).json({ message: "Patient successfully deleted." });
+    } else {
+      res.status(400).json({ message: "Invalid ID!" });
+    }
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting patient." });
   }
 };
 
@@ -260,4 +290,5 @@ module.exports = {
   searchPatient,
   getSinglePatient,
   updateSinglePatient,
+  deleteSinglePatient,
 };

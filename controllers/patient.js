@@ -2,12 +2,8 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const csv = require("csv-parse");
 
-// add new patient or
-// multiple patients using CSV uploads--
 const addPatient = async (req, res) => {
-  // Access the uploaded file via req.file
   const uploadedFile = req.file;
-
   // when patient is added by form---
   if (!uploadedFile && req.body) {
     try {
@@ -57,18 +53,12 @@ const addPatient = async (req, res) => {
     }
   } else {
     // when patient is added by csv file---
-
-    // Convert the buffer to a string
     const csvDataString = uploadedFile.buffer.toString();
-    // Create an empty array to store the parsed data
     const data = [];
 
-    // Use csv-parser to read and parse the CSV data from the string
     csv
       .parse(csvDataString, { headers: true })
       .on("data", (row) => {
-        // Process each row of data here
-
         data.push(row);
       })
       .on("end", () => {
@@ -128,10 +118,8 @@ const addPatient = async (req, res) => {
 };
 
 // getting patinets
-// 10 patients per page, with pagination
 const getPatient = async (req, res) => {
   try {
-    // getting page No fro pagination---
     const currentPage = req.query.currentPage ? req.query.currentPage : 1;
     // limit perpage  patients---
 
@@ -147,7 +135,6 @@ const getPatient = async (req, res) => {
       skip,
       take: perPage,
     });
-    console.log("totalPatients", totalPatients);
     res.status(200).json({
       patients,
       totalPatients,
@@ -161,7 +148,6 @@ const getPatient = async (req, res) => {
 
 // search api
 // serahcing based on [''name','email',....more]
-
 const searchPatient = async (req, res) => {
   // query from user side---
   const query = req.body.Query;
@@ -198,7 +184,7 @@ const searchPatient = async (req, res) => {
 
 // get a patients by ID--
 const getSinglePatient = async (req, res) => {
-  const patientId = await parseInt(req.body.id);
+  const patientId = parseInt(req.body.id);
   try {
     if (patientId) {
       const patient = await prisma.patients.findUnique({

@@ -39,11 +39,11 @@ model users {
   updated_at        DateTime? @db.Timestamp(0)
 }
 
-
 model patients {
   id            Int    @id @default(autoincrement())
   first_name    String
   last_name     String
+  full_name     String
   gender        String
   age           Int
   email         String @unique
@@ -54,4 +54,10 @@ model patients {
   country       String
   zip_code      String
   nhs_number    String @unique
+}
+
+model urls {
+  id   Int    @id @default(autoincrement())
+  name String
+  url  String @unique
 }

@@ -1,6 +1,8 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const csv = require("csv-parse");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const addPatient = async (req, res) => {
   const uploadedFile = req.file;
@@ -26,6 +28,7 @@ const addPatient = async (req, res) => {
       const newPatient = await prisma.patients.create({
         data: {
           ...bodyData,
+          full_name: first_name + last_name,
         },
       });
 
@@ -65,23 +68,42 @@ const addPatient = async (req, res) => {
         const insertPatients = async () => {
           const onlyKeys = data[0].map((key) => key.trim()); // keys
           const onlyValues = data.slice(1); // values
-          // create patients objects ---
-          const newPatientsList = onlyValues.map((values) => {
-            const finalPatient = {};
-
-            onlyKeys.forEach((key, index) => {
-              if (key === "age") {
-                // Parse 'age' as an integer
-                finalPatient[key] = parseInt(values[index], 10);
-              } else {
-                finalPatient[key] = values[index];
-              }
-            });
-
-            return finalPatient;
-          });
+          const newPatientsList = [];
 
           try {
+            for (const values of onlyValues) {
+              const finalPatient = {};
+
+              for (let index = 0; index < onlyKeys.length; index++) {
+                const key = onlyKeys[index];
+
+                // validating zip_code lenth for 8---
+                if (key === "zip_code") {
+                  const zipCode = values[index];
+                  if (zipCode.length !== 8) {
+                    // Return an error if zip_code is not 8 characters long
+                    return res
+                      .status(401)
+                      .json({ message: "Invalid zip code format" });
+                  }
+                  finalPatient[key] = zipCode;
+                } else {
+                  if (key === "age") {
+                    finalPatient[key] = parseInt(values[index], 10);
+                  } else {
+                    finalPatient[key] = values[index];
+                  }
+                  // Create 'full_name' by combining 'first_name' and 'last_name'
+                  if (finalPatient.first_name && finalPatient.last_name) {
+                    finalPatient.full_name =
+                      finalPatient.first_name + finalPatient.last_name;
+                  }
+                }
+              }
+
+              newPatientsList.push(finalPatient);
+            }
+
             const newPatients = await prisma.patients.createMany({
               data: newPatientsList,
               skipDuplicates: false,
@@ -95,13 +117,13 @@ const addPatient = async (req, res) => {
             console.log("error.meta.target", error);
             if (error.meta.target) {
               if (
-                error.meta.target === "Patient_email_key" ||
-                "Patient_phone_key" ||
-                "Patient_nhs_number_key"
+                error.meta.target === "patients_email_key" ||
+                error.meta.target === "patients_phone_key" ||
+                error.meta.target === "patients_nhs_number_key"
               ) {
                 res.status(401).json({
                   message:
-                    "Patient email , phone and nhs_number should be unique",
+                    "Patient email, phone, and nhs_number should be unique",
                 });
               }
             } else {
@@ -150,7 +172,9 @@ const getPatient = async (req, res) => {
 // serahcing based on [''name','email',....more]
 const searchPatient = async (req, res) => {
   // query from user side---
-  const query = req.body.Query;
+
+  const query = req.body.Query.trim().replace(/\s/g, ""); // removed whitespaces---
+
   if (!query) {
     return;
   }
@@ -164,12 +188,25 @@ const searchPatient = async (req, res) => {
           { country: { contains: query } },
           { date_of_birth: { contains: query } },
           { email: { contains: query } },
-          { last_name: { contains: query } },
           { gender: { contains: query } },
           { nhs_number: { contains: query } },
-          { first_name: { contains: query } },
           { phone: { contains: query } },
           { zip_code: { contains: query } },
+          {
+            OR: [
+              { first_name: { contains: query } },
+              { last_name: { contains: query } },
+            ],
+          },
+          {
+            AND: [
+              { first_name: { contains: query.split(" ")[0] } },
+              { last_name: { contains: query.split(" ")[1] } },
+            ],
+          },
+          {
+            full_name: { contains: query },
+          },
         ],
       },
     });
@@ -271,6 +308,132 @@ const deleteSinglePatient = async (req, res) => {
   }
 };
 
+// searching Multiple patientss---
+// search for two  fields---
+//
+
+const searchMultiplePatient = async (req, res) => {
+  const userQuery = req.body.data;
+
+  const a = userQuery?.fQuery?.split(",");
+  const b = userQuery?.sQuery?.split(",");
+
+  // user Inputs from first field---
+  const fullName = a?.[0];
+  const dob = a?.[1];
+  const nhsNumber = a?.[2];
+
+  // user Inputs from second field---
+
+  const address = b?.[0];
+  const street = b?.[1];
+  const phone = b?.[2];
+
+  // query from user side---
+  if (a === undefined && b === undefined) {
+    return res.status(400).json({ message: "No search criteria provided." });
+  }
+
+  try {
+    const patients = await prisma.patients.findMany({
+      where: {
+        OR: [
+          fullName
+            ? {
+                OR: [
+                  { first_name: { contains: fullName } },
+                  { last_name: { contains: fullName } },
+                ],
+              }
+            : null,
+          dob ? { date_of_birth: { contains: dob } } : null,
+          nhsNumber ? { nhs_number: { contains: nhsNumber } } : null,
+          address ? { address: { contains: address } } : null,
+          street ? { street: { contains: street } } : null,
+          phone ? { phone: { contains: phone } } : null,
+        ].filter(Boolean),
+      },
+    });
+
+    res.status(202).json({ patients, message: "Patients Found!" });
+  } catch (error) {
+    console.log("Error", error);
+    res.status(500).json({ message: "Something went wrong while searching!" });
+  }
+};
+
+//user registration---
+const userRegistration = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  // user creation time---
+  const createdAt = new Date();
+
+  // hasing password---
+  const hashedPass = await bcrypt.hash(password, 10);
+  const payload = {
+    name,
+    email,
+    password: hashedPass,
+    created_at: createdAt,
+  };
+
+  try {
+    const user = await prisma.users.create({
+      data: payload,
+    });
+    res
+      .status(201)
+      .json({ user, message: "User created succesfully.", isLoggedIn: true });
+  } catch (error) {
+    if (error) {
+      res.status(401).json({ message: "Please check credentials" });
+    }
+  }
+};
+
+//user registration---
+const userLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await prisma.users.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      res
+        .status(400)
+        .json({ user, message: "User not found. check credentials" });
+    } else {
+      // comparing both password---
+      const comparePass = await bcrypt.compare(password, user.password);
+      if (!comparePass) {
+        res
+          .status(401)
+          .json({ message: "Invalid password.", isLoggedIn: false });
+      } else {
+        // Generate a JWT token for authentication
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+          expiresIn: "1h", // Token expiration time
+        });
+
+        res.json({ token });
+
+        res.status(200).json({
+          user,
+          message: "User logggIn succesfully.",
+          isLoggedIn: true,
+        });
+      }
+    }
+  } catch (error) {
+    if (error) {
+      res
+        .status(401)
+        .json({ message: "Please check credentials", isLoggedIn: false });
+    }
+  }
+};
 module.exports = {
   addPatient,
   getPatient,
@@ -278,4 +441,7 @@ module.exports = {
   getSinglePatient,
   updateSinglePatient,
   deleteSinglePatient,
+  searchMultiplePatient,
+  userRegistration,
+  userLogin,
 };

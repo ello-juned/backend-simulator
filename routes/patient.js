@@ -8,6 +8,9 @@ const {
   getSinglePatient,
   updateSinglePatient,
   deleteSinglePatient,
+  userRegistration,
+  userLogin,
+  searchMultiplePatient,
 } = require("../controllers/patient");
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -32,4 +35,15 @@ router.put("/updateSingle-Patient", updateSinglePatient);
 
 // update a patients by ID--
 router.delete("/deleteSingle-Patient", deleteSinglePatient);
+
+//router.post("/search-patient", searchPatient);
+
+router.post("/searchMultiple-patient", searchMultiplePatient);
+
+// user Registration---
+router.post("/user-Registration", userRegistration);
+
+// user Registration---
+router.post("/user-Login", userLogin);
+
 module.exports = router;
